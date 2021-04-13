@@ -25,18 +25,21 @@ CFLAGS+=-DWASM -nostdlib --target=wasm32 \
 WOFLAGS:=--asyncify --pass-arg=asyncify-imports@bynsyncify.* --pass-arg=asyncify-ignore-indirect
 
 opt.js : template.js main.wasm
-	bash -c 'export BLOB=$$(cat main.wasm | base64 | sed -e "$$ ! {/./s/$$/ \\\\/}" ); envsubst < template.js > mid.js'
+	cat main.wasm | base64 -w 0 > main.b64
+	sed 's/$${BLOB}/\n$${BLOB}\n/g' template.js | sed $$'/$${BLOB}/{r main.b64\nd}' | sed -z "s/'\n/'/" > mid.js
+	rm main.b64
 	#Comment the below line out if you don't want to uglify the javascript.
 	$(TERSER) $(TERSERFLAGS) mid.js -o opt.js
 	rm mid.js
 
 index.html : template.ht opt.js
-	bash -c 'export JAVASCRIPT_DATA=$$(cat opt.js); envsubst < template.ht > $@'
+	sed $$'/$${JAVASCRIPT_DATA}/{r opt.js\nd}' template.ht > $@
 
 main.wasm: rawdraw.c
 	$(CLANG) $(CFLAGS) $^ -o $@
 	$(WASMOPT) $(WOFLAGS) -Oz main.wasm -o main.wasm
 	#wasm-objdump -d main.wasm > main.disassembly.txt
 
+.PHONY: clean
 clean:
 	rm -rf main.wasm opt.js index.html

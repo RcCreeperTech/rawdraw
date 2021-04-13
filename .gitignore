@@ -10,3 +10,5 @@ rawdraw_ogl
 simple
 examples/fontsize
 examples/fontsize_ogl
+wasm/*.wasm
+wasm/*.js
